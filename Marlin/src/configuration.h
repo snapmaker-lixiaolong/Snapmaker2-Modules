@@ -145,7 +145,9 @@ typedef enum {
     FUNC_SET_ENCLOSURE_LIGHT   ,  // 18
     FUNC_SET_FAN_MODULE        ,  // 19
     FUNC_REPORT_STOP_SWITCH    ,  // 20
-    FUNC_SET_PURIFIER_FUN      ,
+    FUNC_SET_PURIFIER_FUN      ,  // 21
+    FUNC_SET_PROBE_SENSOR      ,  // 22
+    FUNC_SET_BLTOUCH_CMD       ,  // 23
 } FUNC_ID;
 
 typedef enum {

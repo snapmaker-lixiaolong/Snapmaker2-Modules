@@ -35,6 +35,8 @@ const uint16_t print_func_list_[] = {
   FUNC_SET_PID,
   FUNC_REPORT_CUT,
   FUNC_REPORT_TEMP_PID,
+  FUNC_SET_PROBE_SENSOR,
+  FUNC_SET_BLTOUCH_CMD,
 };
 
 const uint16_t laser_func_list_[] = {

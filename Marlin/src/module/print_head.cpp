@@ -36,6 +36,8 @@ void PrintHead::Init() {
   fan_2_.Init(FAN_2_PIN);
   switch_probe_.Init(PA7);
   switch_cut_.Init(PB0);
+  bltouch_.PwmPinInit(PA3);
+  bltouch_.SignalPinInit(PB6, INPUT_PULLDOWN);
   temperature_.InitCapture(6, PA6, 4);
   temperature_.InitOutCtrl(2, 2, PA1);
   uint32_t moduleType = registryInstance.module();
@@ -44,12 +46,44 @@ void PrintHead::Init() {
     digitalWrite(PA2, HIGH);
   }
 }
+
+void PrintHead::set_probe_sensor(uint8_t sensor_index) {
+  switch (sensor_index) {
+    case 0:
+      this->bltouch_.SetBLTouch(90);
+      this->probe_sensor = PROBE_SENSOR_SWITCH;
+      break;
+    case 1:
+      this->bltouch_.SetBLTouch(10);
+      this->probe_sensor = PROBE_SENSOR_BLTOUCH;
+      break;
+    default:
+      this->probe_sensor = PROBE_SENSOR_SWITCH;
+      break;
+  }
+
+  delay(2000);
+
+  uint16_t msgid = registryInstance.FuncId2MsgId(FUNC_SET_PROBE_SENSOR);
+  if (msgid != INVALID_VALUE) {
+    uint8_t sensor = (uint8_t)(this->probe_sensor);
+    canbus_g.PushSendStandardData(msgid, &sensor, 1);
+  }
+}
+
 void PrintHead::HandModule(uint16_t func_id, uint8_t * data, uint8_t data_len) {
   float val = 0.0;
   switch ((uint32_t)func_id) {
     case FUNC_REPORT_CUT:
       this->switch_cut_.ReportStatus(FUNC_REPORT_CUT);
       break;
+    case FUNC_SET_PROBE_SENSOR:
+      this->set_probe_sensor(data[0]);
+    break;
+    case FUNC_SET_BLTOUCH_CMD:
+      //if (this->probe_sensor != PROBE_SENSOR_BLTOUCH) return;
+      this->bltouch_.SetBLTouch(data[0]);
+    break;
     case FUNC_REPORT_PROBE:
       this->switch_probe_.ReportStatus(FUNC_REPORT_PROBE);
       break;
@@ -96,16 +130,23 @@ void PrintHead::Loop() {
     }
     this->cut_report_time_ = millis();
   }
+
   if (this->is_report_cut_ && ((this->cut_report_time_ + 500) > millis())) {
     this->is_report_cut_ = false;
     switch_cut_.ReportStatus(FUNC_REPORT_CUT);
   }
 
-  if (switch_probe_.CheckStatusLoop()) {
-    switch_probe_.ReportStatus(FUNC_REPORT_PROBE);
+  if (this->probe_sensor == PROBE_SENSOR_SWITCH) {
+    if (switch_probe_.CheckStatusLoop()) {
+      switch_probe_.ReportStatus(FUNC_REPORT_PROBE);
+    }
+  }
+  else if (this->probe_sensor == PROBE_SENSOR_BLTOUCH) {
+     if (bltouch_.CheckStatusLoop()) {
+      bltouch_.ReportStatus(FUNC_REPORT_PROBE);
+    }
   }
 
   this->fan_1_.Loop();
   this->fan_2_.Loop();
-
 }
